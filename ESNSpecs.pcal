@@ -1,0 +1,79 @@
+(* These Specificaton of Enterprise Social Networks are written by Sabina Akhtar. *)
+
+(*   Header  *)
+algorithm ESNSpecs
+extends Sequences, Naturals, TLC, FiniteSets
+
+(*  Declaration Section  *)
+
+variable  
+
+		EP1Users = {"Alice", "Tim"},
+		EP2Users = {"Bob", "Genny"},
+		AllUsers = EP1Users \cup EP2Users,
+		
+		EP1Res = {"R1", "R2"},
+		EP2Res = {"R3", "R4"},
+		AllRes = EP1Res \cup EP2Res,
+
+		ReqPool = [u \in AllUsers, r \in AllRes |-> [status |-> {}]],	
+						
+		h = {},
+		a = 0
+
+		process Enterprise1[1]
+		variable
+			Policies = [u \in AllUsers |-> CASE (u = "Alice") -> {[res |-> "R2", act |-> "deny"], [res |-> "R3", act |-> "allow"]} 
+										[] (u = "Bob") -> {[res |-> "R4", act |-> "deny"], [res |-> "R3", act |-> "allow"]}
+										[] (u = "Tim") -> {[res |-> "R3", act |-> "allow"], [res |-> "R2", act |-> "deny"]}
+										[] (u = "Genny") -> {[res |-> "R4", act |-> "deny"], [res |-> "R4", act |-> "deny"]}],
+			rules = 0, status = 0, statusRecord = 0
+		begin
+		atomic
+			for u \in AllUsers
+				for r \in AllRes
+					rules := Policies[u];
+					for rule \in rules
+							if rule.res = r then
+									statusRecord := ReqPool[u,r];
+									statusRecord.status := statusRecord.status \cup {rule.act};
+									ReqPool[u,r] := statusRecord;
+							end if;
+					end for;
+				end for; 
+			end for; 
+			end atomic;
+			
+		end process
+
+		process Enterprise2[1]
+		variable
+			Policies = [u \in AllUsers |-> CASE (u = "Alice") -> {[res |-> "R2", act |-> "deny"], [res |-> "R1", act |-> "allow"]}  
+										[] (u = "Bob") -> {[res |-> "R1", act |-> "deny"], [res |-> "R2", act |-> "allow"]}
+										[] (u = "Tim") -> {[res |-> "R1", act |-> "deny"], [res |-> "R4", act |-> "deny"]}
+										[] (u = "Genny") -> {[res |-> "R1", act |-> "deny"], [res |-> "R4", act |-> "allow"]}],
+			rules = 0, status = 0, statusRecord = 0
+		begin
+		atomic
+			for u \in AllUsers
+				for r \in AllRes
+					rules := Policies[u];
+					for rule \in rules
+							if rule.res = r then
+									statusRecord := ReqPool[u,r];
+									statusRecord.status := statusRecord.status \cup {rule.act};
+									ReqPool[u,r] := statusRecord;
+							end if;
+					end for;
+				end for; 
+			end for; 
+			end atomic;
+			
+		end process
+		
+end algorithm
+
+invariant \A u \in AllUsers, r \in AllRes : (ReqPool[u,r].status \cap {"allow", "deny"}) # {"allow", "deny"}
+
+
+
